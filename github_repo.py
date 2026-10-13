@@ -1,8 +1,34 @@
+import argparse
 import os
 import sys
 from datetime import datetime, timedelta, timezone
 
 import requests
+
+
+def parse_arguments():
+    parser = argparse.ArgumentParser(
+        description="Query GitHub repository data and analyze account repositories."
+    )
+
+    parser.add_argument(
+        "owner",
+        help="GitHub repository owner",
+    )
+
+    parser.add_argument(
+        "repo",
+        help="GitHub repository name",
+    )
+
+    parser.add_argument(
+        "--stale-days",
+        type=int,
+        default=365,
+        help="Number of days before a repository is considered stale (default: 365)",
+    )
+
+    return parser.parse_args()
 
 
 def build_headers():
@@ -108,7 +134,7 @@ def print_repository_list(repositories):
         )
 
 
-def find_stale_repositories(repositories, stale_days=365):
+def find_stale_repositories(repositories, stale_days):
     cutoff = datetime.now(timezone.utc) - timedelta(days=stale_days)
 
     stale_repositories = []
@@ -146,17 +172,17 @@ def print_stale_repositories(stale_repositories, stale_days):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python github_repo.py <owner> <repo>")
-        sys.exit(1)
-
-    owner = sys.argv[1]
-    repo = sys.argv[2]
+    args = parse_arguments()
 
     headers = build_headers()
 
     try:
-        data = get_repository(owner, repo, headers)
+        data = get_repository(
+            args.owner,
+            args.repo,
+            headers,
+        )
+
         print_repository_summary(data)
 
         get_rate_limit(headers)
@@ -164,16 +190,14 @@ def main():
         repositories = get_user_repositories(headers)
         print_repository_list(repositories)
 
-        stale_days = 365
-
         stale_repositories = find_stale_repositories(
             repositories,
-            stale_days,
+            args.stale_days,
         )
 
         print_stale_repositories(
             stale_repositories,
-            stale_days,
+            args.stale_days,
         )
 
     except requests.exceptions.HTTPError as error:
@@ -185,4 +209,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
