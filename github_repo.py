@@ -6,6 +6,17 @@ from datetime import datetime, timedelta, timezone
 import requests
 
 
+def positive_integer(value):
+    number = int(value)
+
+    if number <= 0:
+        raise argparse.ArgumentTypeError(
+            "stale-days must be greater than 0"
+        )
+
+    return number
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description="Query GitHub repository data and analyze account repositories."
@@ -23,7 +34,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--stale-days",
-        type=int,
+        type=positive_integer,
         default=365,
         help="Number of days before a repository is considered stale (default: 365)",
     )
@@ -48,7 +59,11 @@ def build_headers():
 def get_repository(owner, repo, headers):
     url = f"https://api.github.com/repos/{owner}/{repo}"
 
-    response = requests.get(url, headers=headers, timeout=10)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=10,
+    )
 
     print("Status:", response.status_code)
     print("Rate limit:", response.headers.get("X-RateLimit-Limit"))
@@ -72,7 +87,12 @@ def print_repository_summary(data):
 def get_rate_limit(headers):
     url = "https://api.github.com/rate_limit"
 
-    response = requests.get(url, headers=headers, timeout=10)
+    response = requests.get(
+        url,
+        headers=headers,
+        timeout=10,
+    )
+
     response.raise_for_status()
 
     data = response.json()
@@ -87,7 +107,10 @@ def get_rate_limit(headers):
     print("Limit:", core["limit"])
     print("Used:", core["used"])
     print("Remaining:", core["remaining"])
-    print("Reset:", reset_time.strftime("%Y-%m-%d %H:%M:%S %Z"))
+    print(
+        "Reset:",
+        reset_time.strftime("%Y-%m-%d %H:%M:%S %Z"),
+    )
 
 
 def get_user_repositories(headers):
@@ -108,7 +131,10 @@ def get_user_repositories(headers):
             timeout=10,
         )
 
-        print("\nRepository list request:", response.status_code)
+        print(
+            "\nRepository list request:",
+            response.status_code,
+        )
 
         response.raise_for_status()
 
@@ -135,7 +161,9 @@ def print_repository_list(repositories):
 
 
 def find_stale_repositories(repositories, stale_days):
-    cutoff = datetime.now(timezone.utc) - timedelta(days=stale_days)
+    cutoff = datetime.now(timezone.utc) - timedelta(
+        days=stale_days
+    )
 
     stale_repositories = []
 
@@ -155,8 +183,14 @@ def find_stale_repositories(repositories, stale_days):
     return stale_repositories
 
 
-def print_stale_repositories(stale_repositories, stale_days):
-    print(f"\nStale repositories (not updated in more than {stale_days} days)")
+def print_stale_repositories(
+    stale_repositories,
+    stale_days,
+):
+    print(
+        f"\nStale repositories "
+        f"(not updated in more than {stale_days} days)"
+    )
 
     if not stale_repositories:
         print("None")
@@ -188,6 +222,7 @@ def main():
         get_rate_limit(headers)
 
         repositories = get_user_repositories(headers)
+
         print_repository_list(repositories)
 
         stale_repositories = find_stale_repositories(
