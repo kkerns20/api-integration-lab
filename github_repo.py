@@ -1,6 +1,7 @@
 import os
 import sys
 import requests
+from datetime import datetime
 
 
 def build_headers():
@@ -41,6 +42,23 @@ def print_repository_summary(data):
     print("Open issues:", data["open_issues_count"])
 
 
+def get_rate_limit(headers):
+    url = "https://api.github.com/rate_limit"
+
+    response = requests.get(url, headers=headers, timeout=10)
+    response.raise_for_status()
+
+    data = response.json()
+    core = data["resources"]["core"]
+    reset_time = datetime.fromtimestamp(core["reset"]).astimezone()
+
+    print("\nAPI Rate Limit")
+    print("Limit:", core["limit"])
+    print("Used:", core["used"])
+    print("Remaining:", core["remaining"])
+    print("Reset:", reset_time.strftime("%Y-%m-%d %H:%M:%S %Z"))
+
+
 def main():
     if len(sys.argv) != 3:
         print("Usage: python github_repo.py <owner> <repo>")
@@ -54,6 +72,7 @@ def main():
     try:
         data = get_repository(owner, repo, headers)
         print_repository_summary(data)
+        get_rate_limit(headers)
 
     except requests.exceptions.HTTPError as error:
         print("HTTP error:", error)
